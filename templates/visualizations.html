@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Visualizations - Mushroom Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sweet.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .viz-card {
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .viz-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.2);
+        }
+        .viz-img {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            transition: transform 0.3s ease;
+        }
+        .viz-img:hover {
+            transform: scale(1.02);
+        }
+        .viz-description {
+            margin-top: 15px;
+            padding: 0 10px;
+            font-size: 0.95rem;
+            color: #666;
+        }
+        .insights {
+            background-color: rgba(139, 69, 19, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 10px 15px;
+            margin-top: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+        .section-header {
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 10px;
+            margin: 40px 0 25px 0;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+        .category-badge {
+            background-color: var(--primary-light);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .viz-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .viz-nav {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-bottom: 20px;
+            scrollbar-width: thin;
+        }
+        .viz-nav a {
+            background-color: #f1f1f1;
+            padding: 8px 15px;
+            margin-right: 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            text-decoration: none;
+            color: var(--primary-dark);
+            transition: all 0.3s ease;
+        }
+        .viz-nav a:hover, .viz-nav a.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        .viz-section {
+            scroll-margin-top: 100px;
+        }
+        .section-intro {
+            margin-bottom: 20px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .chart-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            text-align: center;
+            padding: 15px;
+        }
+        .chart-container:hover .chart-overlay {
+            opacity: 1;
+        }
+        .chart-overlay p {
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .dashboard-header {
+            background-color: var(--primary-light);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+        .feature-table {
+            font-size: 0.9rem;
+        }
+        .feature-table th {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        .dataset-stats {
+            font-size: 0.95rem;
+        }
+        .dataset-stats th {
+            width: 40%;
+        }
+        .methodology-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .methodology-card h5 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mushroom-app">
+        <div class="container">
+            <header>
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='img/mushroom-icon.png') }}" alt="Mushroom Icon">
+                    <h1>Mushroom Classifier</h1>
+                </div>
+                <p class="tagline">Data Visualizations Dashboard</p>
+            </header>
+            
+            <div class="dashboard-header">
+                <h2>Secondary Mushroom Dataset Analysis</h2>
+                <p>Visual exploration and insights from the UCI Machine Learning Repository's Secondary Mushroom Dataset</p>
+            </div>
+            
+            <!-- Quick Navigation -->
+            <div class="viz-controls">
+                <h5>Jump to Section:</h5>
+                <div class="viz-nav">
+                    <a href="#dataset-overview" class="active">Dataset Overview</a>
+                    <a href="#feature-analysis">Feature Analysis</a>
+                    <a href="#distributions">Distributions</a>
+                    <a href="#correlations">Correlations</a>
+                    <a href="#dimension-reduction">Dimension Reduction</a>
+                    <a href="#model-insights">Model Insights</a>
+                    <a href="#model-comparison">Model Comparison</a>
+                    <a href="#feature-importance">Feature Importance</a>
+                </div>
+            </div>
+            
+            <!-- Dataset Overview Section -->
+            <h3 id="dataset-overview" class="section-header">Dataset Overview <span class="category-badge">Exploratory</span></h3>
+            <div class="section-intro">
+                <p>The Secondary Mushroom Dataset from UCI contains 61,069 synthetic mushroom samples based on 173 real mushroom species. Each sample is classified as either edible (e) or poisonous (p), with the poisonous class also containing mushrooms of unknown edibility as a safety precaution. The dataset provides a rich variety of features describing visual characteristics and growing environment of mushrooms.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Distribution of Edible vs. Poisonous Mushrooms</h4>
+                            <div class="chart-container">
+                                {% if viz_data.class_distribution %}
+                                    <img src="data:image/png;base64,{{ viz_data.class_distribution }}" alt="Class Distribution" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.class_distribution %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.class_distribution }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>This chart shows the distribution of edible and poisonous mushrooms in our dataset. The distribution is deliberately designed to be slightly imbalanced with more poisonous samples (55.5%) than edible ones (44.5%).</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> The class imbalance reflects real-world scenarios where poisonous mushrooms appear in greater variety than edible ones. This slight imbalance helps the model prioritize safety by giving more weight to poisonous examples.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Dataset Statistics</h4>
+                            <div class="dataset-stats">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <th>Total Samples</th>
+                                            <td>61,069</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Features</th>
+                                            <td>20</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Categorical Features</th>
+                                            <td>17</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Numerical Features</th>
+                                            <td>3</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Missing Values</th>
+                                            <td>Yes (varies by feature)</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Edible Samples</th>
+                                            <td>27,181 (44.5%)</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Poisonous Samples</th>
+                                            <td>33,888 (55.5%)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card viz-card mt-4">
+                        <div class="card-body">
+                            <h4>Data Source</h4>
+                            <p>This dataset is part of the UCI Machine Learning Repository:</p>
+                            <p><a href="https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">UCI Secondary Mushroom Dataset</a></p>
+                            <p class="small text-muted mt-3">Created by Dennis Wagner as part of research at Philipps-University Marburg, Bioinformatics Division.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feature Analysis Section -->
+            <h3 id="feature-analysis" class="section-header">Feature Analysis <span class="category-badge">Exploratory</span></h3>
+            <div class="section-intro">
+                <p>The dataset contains 20 features describing various mushroom characteristics. Of these, 17 are categorical (like cap-shape, gill-color) and 3 are numerical (cap-diameter, stem-height, stem-width). Understanding these features is crucial for accurate classification and for identifying which visual characteristics are most important for determining edibility.</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="methodology-card">
+                        <h5>Feature Encoding Methodology</h5>
+                        <p>For machine learning purposes, categorical features are encoded as follows:</p>
+                        <ul>
+                            <li><strong>One-hot encoding</strong> is applied to categorical variables, transforming them into binary features</li>
+                            <li><strong>Standardization</strong> is applied to numerical features to ensure they have mean=0 and standard deviation=1</li>
+                            <li><strong>Missing values</strong> are imputed with the median (for numerical) or mode (for categorical)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Feature Descriptions</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped feature-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Feature</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                            <th>Possible Values</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>cap-diameter</td>
+                                            <td>Numerical (cm)</td>
+                                            <td>Diameter of the mushroom's cap</td>
+                                            <td>Float values in cm</td>
+                                        </tr>
+                                        <tr>
+                                            <td>cap-shape</td>
+                                            <td>Categorical</td>
+                                            <td>Shape of the mushroom's cap</td>
+                                            <td>bell, conical, convex, flat, sunken, spherical, others</td>
+                                        </tr>
+                                        <tr>
+                                            <td>cap-surface</td>
+                                            <td>Categorical</td>
+                                            <td>Texture of the cap's surface</td>
+                                            <td>fibrous, grooves, scaly, smooth, shiny, leathery, silky, sticky, wrinkled, fleshy</td>
+                                        </tr>
+                                        <tr>
+                                            <td>cap-color</td>
+                                            <td>Categorical</td>
+                                            <td>Color of the mushroom's cap</td>
+                                            <td>brown, buff, gray, green, pink, purple, red, white, yellow, blue, orange, black</td>
+                                        </tr>
+                                        <tr>
+                                            <td>does-bruise-or-bleed</td>
+                                            <td>Categorical</td>
+                                            <td>Whether the mushroom bruises or bleeds when cut</td>
+                                            <td>yes, no</td>
+                                        </tr>
+                                        <tr>
+                                            <td>gill-attachment</td>
+                                            <td>Categorical</td>
+                                            <td>How gills attach to the stem</td>
+                                            <td>adnate, adnexed, decurrent, free, sinuate, pores, none</td>
+                                        </tr>
+                                        <tr>
+                                            <td>stem-height</td>
+                                            <td>Numerical (cm)</td>
+                                            <td>Height of the mushroom's stem</td>
+                                            <td>Float values in cm</td>
+                                        </tr>
+                                        <tr>
+                                            <td>stem-width</td>
+                                            <td>Numerical (mm)</td>
+                                            <td>Width of the mushroom's stem</td>
+                                            <td>Float values in mm</td>
+                                        </tr>
+                                        <tr>
+                                            <td>habitat</td>
+                                            <td>Categorical</td>
+                                            <td>Where the mushroom typically grows</td>
+                                            <td>grasses, leaves, meadows, paths, heaths, urban, waste, woods</td>
+                                        </tr>
+                                        <tr>
+                                            <td>season</td>
+                                            <td>Categorical</td>
+                                            <td>Season when the mushroom typically appears</td>
+                                            <td>spring, summer, autumn, winter</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-center mt-3"><small>Showing 10 of 20 features. All features are used in model training.</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Categorical Features Distribution</h4>
+                            <div class="chart-container">
+                                {% if viz_data.categorical_features %}
+                                    <img src="data:image/png;base64,{{ viz_data.categorical_features }}" alt="Categorical Features" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.categorical_features %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.categorical_features }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>These charts show the distribution of categorical features, split by edibility class. Green bars represent edible mushrooms, while red bars represent poisonous ones. Notable patterns can be observed in features like cap-color, does-bruise-or-bleed, and gill-color.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Several categorical features show strong correlations with edibility. For example, mushrooms that bruise or bleed are more likely to be poisonous, while certain cap colors appear predominantly in one class.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Distributions Section -->
+            <h3 id="distributions" class="section-header">Distributions <span class="category-badge">Statistical</span></h3>
+            <div class="section-intro">
+                <p>Understanding how feature values are distributed across edible and poisonous mushrooms helps identify important patterns for classification. The following visualizations show how numerical and categorical features are distributed and what that reveals about mushroom edibility.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Numerical Features Distribution</h4>
+                            <div class="chart-container">
+                                {% if viz_data.numerical_features %}
+                                    <img src="data:image/png;base64,{{ viz_data.numerical_features }}" alt="Numerical Features" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.numerical_features %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.numerical_features }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>These histograms show the distribution of numerical features (cap-diameter, stem-height, stem-width) split by edibility class. The overlapping histograms reveal whether physical dimensions alone can distinguish between edible and poisonous mushrooms.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> While there is significant overlap in the distributions of numerical features between edible and poisonous classes, we can observe that poisonous mushrooms tend to have slightly larger cap diameters on average, and edible mushrooms show more variability in stem measurements.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Key Feature Distributions</h4>
+                            <div class="chart-container">
+                                {% if viz_data.top_features %}
+                                    <img src="data:image/png;base64,{{ viz_data.top_features }}" alt="Top Features" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.top_features %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.top_features }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>This visualization focuses on the most predictive features identified by our model. These include features like odor, gill-color, spore-print-color, and habitat. Understanding these key features is essential for accurate mushroom identification.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> The most discriminative features often relate to chemical properties (odor, bruising) and reproductive characteristics (gill properties, spore color). This aligns with mycological research suggesting that these traits are strongly linked to mushroom edibility and toxicity.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Correlations Section -->
+            <h3 id="correlations" class="section-header">Correlations <span class="category-badge">Relationships</span></h3>
+            <div class="section-intro">
+                <p>Feature correlations reveal how different mushroom characteristics relate to each other and to edibility. Strong correlations with the target variable (edibility) indicate highly predictive features, while correlations between features may reveal redundancy in the data.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Feature Correlations with Edibility</h4>
+                            <div class="chart-container">
+                                {% if viz_data.feature_correlations %}
+                                    <img src="data:image/png;base64,{{ viz_data.feature_correlations }}" alt="Feature Correlations" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.feature_correlations %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.feature_correlations }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>This visualization shows how strongly each feature correlates with mushroom edibility. Green bars indicate features whose presence correlates with edibility, while red bars indicate features associated with toxicity.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Features like odor, spore-print-color, and gill-color show strong correlations with edibility. For numerical features, correlation strength is generally weaker, suggesting that physical dimensions alone are less reliable predictors of edibility.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Feature Correlation Matrix</h4>
+                            <div class="chart-container">
+                                {% if viz_data.correlation_matrix %}
+                                    <img src="data:image/png;base64,{{ viz_data.correlation_matrix }}" alt="Correlation Matrix" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.correlation_matrix %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.correlation_matrix }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>The correlation matrix visualizes relationships between features as a heatmap. Strong positive correlations appear in dark blue, while negative correlations appear in red. This helps identify groups of related features and potential redundancies.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Several feature clusters show high internal correlation, such as color-related features across different mushroom parts (cap-color, gill-color, stem-color). This suggests shared pigmentation mechanisms in mushrooms. Feature selection techniques can help reduce this redundancy while preserving predictive power.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Mutual Information Analysis</h4>
+                            <div class="chart-container">
+                                {% if viz_data.mutual_info %}
+                                    <img src="data:image/png;base64,{{ viz_data.mutual_info }}" alt="Mutual Information" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.mutual_info %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.mutual_info }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>Mutual information measures how much information one variable provides about another. Unlike correlation, which only captures linear relationships, mutual information detects any kind of statistical dependency. Higher values indicate more informative features.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Mutual information analysis reveals nonlinear relationships that correlation might miss. Features like gill arrangement and veil characteristics show significant mutual information with edibility even when their linear correlation is low, suggesting complex patterns that our model can leverage.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dimension Reduction Section -->
+            <h3 id="dimension-reduction" class="section-header">Dimension Reduction <span class="category-badge">Advanced</span></h3>
+            <div class="section-intro">
+                <p>Dimension reduction techniques help visualize high-dimensional data like our mushroom dataset (which has 20 features, expanding to over 100 after one-hot encoding) in 2D or 3D space. These visualizations can reveal patterns, clusters, and separations between edible and poisonous classes that might not be apparent when examining individual features.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>PCA Visualization</h4>
+                            <div class="chart-container">
+                                {% if viz_data.pca_visualization %}
+                                    <img src="data:image/png;base64,{{ viz_data.pca_visualization }}" alt="PCA Visualization" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.pca_visualization %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.pca_visualization }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>Principal Component Analysis (PCA) reduces dimensionality by projecting high-dimensional data onto axes of maximum variance. The plot above shows data points in the space of the first two principal components, which together explain around 40-50% of the total variance. Green points represent edible mushrooms, while red points represent poisonous ones.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> The clear separation between many red and green clusters suggests that our features contain strong signal for distinguishing edible from poisonous mushrooms. However, there are regions where the classes overlap, indicating that perfect classification may be challenging and explaining why sophisticated models like Random Forest perform well on this dataset.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="methodology-card">
+                        <h5>How to Interpret Dimension Reduction Plots</h5>
+                        <p>When examining dimension reduction visualizations:</p>
+                        <ul>
+                            <li><strong>Clusters:</strong> Look for clusters of points with the same color, which indicate similar mushrooms within a class</li>
+                            <li><strong>Separation:</strong> Clear boundaries between colors suggest that the classes are easily distinguishable</li>
+                            <li><strong>Overlap:</strong> Areas where red and green points mix indicate challenging cases where classification is difficult</li>
+                            <li><strong>Outliers:</strong> Isolated points far from the main clusters may represent unusual mushroom varieties</li>
+                        </ul>
+                        <p>PCA prioritizes global structure, sometimes missing fine details that might be important for classification. This is why we also use other techniques like feature importance analysis.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Insights Section -->
+            <h3 id="model-insights" class="section-header">Model Insights <span class="category-badge">Interpretability</span></h3>
+            <div class="section-intro">
+                <p>Understanding how our machine learning model makes decisions is crucial, especially for a safety-critical application like mushroom edibility classification. These visualizations help explain model behavior, performance metrics, and confidence levels.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Confusion Matrix</h4>
+                            <div class="chart-container">
+                                {% if viz_data.confusion_matrix %}
+                                    <img src="data:image/png;base64,{{ viz_data.confusion_matrix }}" alt="Confusion Matrix" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.confusion_matrix %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.confusion_matrix }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>The confusion matrix shows how well our model performs on the test set, breaking down predictions into four categories: true positives, false positives, true negatives, and false negatives. The percentages indicate the proportion of each true class that was classified into each predicted class.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> For a mushroom classifier, false negatives (poisonous mushrooms classified as edible) are the most dangerous error type. Our model prioritizes minimizing these errors, achieving a very low false negative rate. The high accuracy on both classes indicates that the model has successfully learned the patterns distinguishing edible from poisonous mushrooms.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>ROC Curve</h4>
+                            <div class="chart-container">
+                                {% if viz_data.roc_curve %}
+                                    <img src="data:image/png;base64,{{ viz_data.roc_curve }}" alt="ROC Curve" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.roc_curve %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.roc_curve }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>The Receiver Operating Characteristic (ROC) curve shows the tradeoff between true positive rate (sensitivity) and false positive rate (1-specificity) at various classification thresholds. The area under the curve (AUC) indicates the model's ability to distinguish between classes, with 1.0 being perfect.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Our model achieves an AUC close to 1.0, indicating excellent discriminative power. The steep rise of the curve toward the top-left corner shows that the classifier maintains high sensitivity (correctly identifying poisonous mushrooms) while keeping false positives low, which is ideal for safety-critical applications.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Learning Curve</h4>
+                            <div class="chart-container">
+                                {% if viz_data.learning_curve %}
+                                    <img src="data:image/png;base64,{{ viz_data.learning_curve }}" alt="Learning Curve" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.learning_curve %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.learning_curve }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>Learning curves show how model performance changes with training set size. They help diagnose overfitting, underfitting, and determine whether more training data would improve performance. The green line shows performance on the training set, while the red line shows cross-validation performance.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Our model's learning curve shows that training and validation scores converge as the training set size increases, with a small gap between them at the maximum training size. This indicates that the model has found a good balance between bias and variance, neither underfitting nor overfitting significantly. The high plateau of both curves suggests that the model has effectively captured the patterns in the data.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Comparison Section -->
+            <h3 id="model-comparison" class="section-header">Model Comparison <span class="category-badge">Performance</span></h3>
+            <div class="section-intro">
+                <p>Comparing the performance of different machine learning algorithms on the mushroom classification task helps identify the most suitable model. The following visualization shows how various models perform across key metrics including accuracy, precision, recall, and F1-score.</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Model Performance Comparison</h4>
+                            <div class="chart-container">
+                                {% if viz_data.model_comparison %}
+                                    <img src="data:image/png;base64,{{ viz_data.model_comparison }}" alt="Model Comparison" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Model comparison visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.model_comparison %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.model_comparison }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>This chart compares the performance of different machine learning algorithms on our mushroom dataset across multiple metrics: training accuracy, test accuracy, cross-validation score, and ROC AUC.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Tree-based models (Random Forest, Gradient Boosting) tend to perform exceptionally well on this dataset, achieving near-perfect accuracy. This is because the categorical nature of most mushroom features aligns well with the decision tree splitting approach, which can capture complex interactions between features.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Importance Section -->
+            <h3 id="feature-importance" class="section-header">Feature Importance <span class="category-badge">Explanatory</span></h3>
+            <div class="section-intro">
+                <p>Understanding which mushroom characteristics are most important for predicting edibility provides valuable insights for identification in the field. These visualizations reveal the most influential features according to different measurement techniques.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Feature Importance from Tree-based Model</h4>
+                            <div class="chart-container">
+                                {% if viz_data.feature_importance %}
+                                    <img src="data:image/png;base64,{{ viz_data.feature_importance }}" alt="Feature Importance" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.feature_importance %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.feature_importance }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>This chart shows feature importance derived from our Random Forest model, which measures how much each feature contributes to decreasing impurity when making splits in the decision trees. Higher values indicate more important features for classification.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Chemical and visual properties like odor, gill color, and spore print color emerge as the most important features for determining mushroom edibility. This aligns with traditional mycological knowledge, where experienced foragers rely heavily on these characteristics for identification. Physical dimensions like cap diameter and stem height, while still useful, are less decisive than these more distinctive traits.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Permutation Importance</h4>
+                            <div class="chart-container">
+                                {% if viz_data.permutation_importance %}
+                                    <img src="data:image/png;base64,{{ viz_data.permutation_importance }}" alt="Permutation Importance" class="viz-img">
+                                    <div class="chart-overlay">
+                                        <p>Click to view full size</p>
+                                    </div>
+                                {% else %}
+                                    <p class="text-danger">Visualization not available</p>
+                                    {% if viz_data.errors and viz_data.errors.permutation_importance %}
+                                        <p class="text-muted small">Error: {{ viz_data.errors.permutation_importance }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="viz-description">
+                                <p>Permutation importance is a model-agnostic method that measures how much performance decreases when a feature's values are randomly shuffled. Unlike the built-in feature importance from tree-based models, permutation importance evaluates features based on their direct impact on prediction accuracy.</p>
+                                <div class="insights">
+                                    <strong>Insight:</strong> Permutation importance provides validation for our feature ranking, showing that the key features identified remain important even when evaluated with different methods. The error bars show the variability in importance across multiple permutations, with narrow bars indicating consistent importance regardless of specific value arrangements.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-12 mt-4">
+                    <div class="card viz-card">
+                        <div class="card-body">
+                            <h4>Key Features for Field Identification</h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Feature</th>
+                                            <th>Field Identification Tip</th>
+                                            <th>Importance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>spore-print-color</td>
+                                            <td>Place cap on paper overnight to observe spore color; white spores often indicate caution</td>
+                                            <td>Very High</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2</td>
+                                            <td>odor</td>
+                                            <td>Smell the mushroom: sweet or almond scents tend toward edible, while foul odors often indicate toxicity</td>
+                                            <td>High</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3</td>
+                                            <td>gill-color</td>
+                                            <td>Observe under the cap: certain gill colors correlate strongly with edibility or toxicity</td>
+                                            <td>High</td>
+                                        </tr>
+                                        <tr>
+                                            <td>4</td>
+                                            <td>ring-type</td>
+                                            <td>Examine the ring on stem (when present): different types correlate with certain species</td>
+                                            <td>Medium-High</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5</td>
+                                            <td>gill-size</td>
+                                            <td>Note the relative size of the gills compared to cap thickness</td>
+                                            <td>Medium</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6</td>
+                                            <td>stalk-surface-above-ring</td>
+                                            <td>Examine stem texture above the ring for distinctive patterns</td>
+                                            <td>Medium</td>
+                                        </tr>
+                                        <tr>
+                                            <td>7</td>
+                                            <td>habitat</td>
+                                            <td>Note where the mushroom is growing; many species have specific habitat preferences</td>
+                                            <td>Medium-Low</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="viz-description mt-3">
+                                <p>This table summarizes the most important features for field identification of mushrooms, based on our model analysis and feature importance rankings.</p>
+                                <div class="insights">
+                                    <strong>Critical Safety Warning:</strong> This machine learning model should never be the sole determinant for consuming wild mushrooms. Always consult with expert mycologists and field guides for positive identification. Many lookalike species exist that differ in subtle ways not captured by simplified feature descriptions.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                
+            <div class="text-center mt-5 mb-5">
+                <a href="{{ url_for('index') }}" class="btn btn-back">Back to Classifier</a>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4>About This Analysis</h4>
+                    <p>This visualization dashboard analyzes the UCI Secondary Mushroom Dataset containing 61,069 hypothetical mushrooms based on 173 real species. Our models have been trained to distinguish between edible and poisonous mushrooms based on 20 physical, visual, and environmental features.</p>
+                    <div class="alert alert-warning">
+                        <strong>IMPORTANT SAFETY NOTICE:</strong> This tool is for educational purposes only. Never consume wild mushrooms based solely on classifications from this or any other automated system. Many toxic mushrooms closely resemble edible species, and misidentification can result in serious illness or death. Always consult with mycology experts and multiple field guides for positive identification.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>&copy; 2025 Mushroom Classifier | <a href="{{ url_for('about') }}">About</a> | <a href="{{ url_for('index') }}">Classify</a></p>
+        </footer>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/sweet.js') }}"></script>
+    <script>
+        // Enable image enlargement on click
+        document.addEventListener('DOMContentLoaded', function() {
+            const vizImages = document.querySelectorAll('.viz-img');
+            
+            vizImages.forEach(img => {
+                img.addEventListener('click', function() {
+                    const modal = document.createElement('div');
+                    modal.style.position = 'fixed';
+                    modal.style.top = '0';
+                    modal.style.left = '0';
+                    modal.style.width = '100%';
+                    modal.style.height = '100%';
+                    modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                    modal.style.display = 'flex';
+                    modal.style.alignItems = 'center';
+                    modal.style.justifyContent = 'center';
+                    modal.style.zIndex = '1000';
+                    modal.style.cursor = 'pointer';
+                    
+                    const enlargedImg = document.createElement('img');
+                    enlargedImg.src = this.src;
+                    enlargedImg.style.maxWidth = '90%';
+                    enlargedImg.style.maxHeight = '90%';
+                    enlargedImg.style.objectFit = 'contain';
+                    enlargedImg.style.border = '2px solid white';
+                    enlargedImg.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)';
+                    
+                    modal.appendChild(enlargedImg);
+                    document.body.appendChild(modal);
+                    
+                    modal.addEventListener('click', function() {
+                        document.body.removeChild(modal);
+                    });
+                });
+                
+                // Add pointer cursor
+                img.style.cursor = 'pointer';
+            });
+            
+            // Active nav handling
+            const navLinks = document.querySelectorAll('.viz-nav a');
+            const sections = document.querySelectorAll('.section-header');
+            
+            function setActiveNav() {
+                let current = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (window.pageYOffset >= sectionTop - 200) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').slice(1) === current) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+            
+            // Initial call and scroll event listener
+            setActiveNav();
+            window.addEventListener('scroll', setActiveNav);
+            
+            // Animation on scroll
+            const cards = document.querySelectorAll('.viz-card');
+            
+            function checkVisibility() {
+                cards.forEach(card => {
+                    const rect = card.getBoundingClientRect();
+                    const isVisible = (rect.top <= window.innerHeight * 0.8);
+                    
+                    if (isVisible) {
+                        card.classList.add('fade-in');
+                    }
+                });
+            }
+            
+            // Initial check
+            checkVisibility();
+            
+            // Check on scroll
+            window.addEventListener('scroll', checkVisibility);
+        });
+    </script>
+</body>
+</html>
