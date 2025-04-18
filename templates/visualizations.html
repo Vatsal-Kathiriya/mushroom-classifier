@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"="width=device-width, initial-scale=1.0">
     <title>Data Visualizations - Mushroom Classifier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sweet.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .viz-card {
             margin-bottom: 30px;
@@ -36,9 +37,14 @@
         .insights {
             background-color: rgba(139, 69, 19, 0.05);
             border-left: 4px solid var(--primary);
-            padding: 10px 15px;
-            margin-top: 10px;
+            padding: 12px 18px;
+            margin-top: 15px;
             border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .insights strong {
+            color: var(--primary-dark);
+            font-size: 1.05rem;
         }
         .section-header {
             border-bottom: 2px solid var(--primary-light);
@@ -94,6 +100,10 @@
         .chart-container {
             position: relative;
             overflow: hidden;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #eee;
         }
         .chart-overlay {
             position: absolute;
@@ -101,23 +111,35 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, transform 0.3s;
             text-align: center;
             padding: 15px;
+            z-index: 5;
         }
         .chart-container:hover .chart-overlay {
             opacity: 1;
+            transform: scale(1);
         }
         .chart-overlay p {
             background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 8px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transform: translateY(0);
+            transition: transform 0.2s;
+        }
+        .chart-container:hover .chart-overlay p {
+            transform: translateY(-3px);
         }
         .dashboard-header {
             background-color: var(--primary-light);
@@ -151,6 +173,136 @@
             color: var(--primary);
             margin-bottom: 10px;
         }
+        /* Dataset Overview specific styles */
+        #dataset-overview + .section-intro {
+            font-size: 1.05rem;
+            background-color: rgba(255,255,255,0.7);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--primary-light);
+        }
+        
+        .dataset-stats table {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .dataset-stats th {
+            background-color: rgba(139, 69, 19, 0.08);
+            width: 45%;
+            font-weight: 600;
+        }
+        
+        .dataset-stats td {
+            background-color: #ffffff;
+        }
+        
+        .dataset-stats tr:hover td, 
+        .dataset-stats tr:hover th {
+            background-color: rgba(139, 69, 19, 0.05);
+        }
+        
+        .badge.bg-success {
+            font-weight: normal;
+            font-size: 0.75rem;
+            padding: 0.25em 0.5em;
+        }
+        
+        .badge.bg-danger {
+            font-weight: normal;
+            font-size: 0.75rem;
+            padding: 0.25em 0.5em;
+        }
+        
+        .text-primary-light {
+            color: var(--primary-light);
+        }
+        
+        .chart-overlay p {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .chart-container {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #eee;
+        }
+        /* Improved Data Source styling */
+        .attribution {
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(139, 69, 19, 0.1);
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .attribution i {
+            color: var(--primary-light);
+            margin-top: 3px;
+        }
+
+        .btn-outline-primary {
+            border-color: var(--primary);
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(139, 69, 19, 0.2);
+        }
+
+        /* Additional styling for Distribution section */
+        .stat-box {
+            background-color: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 5px 0;
+        }
+
+        .stat-badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            color: white;
+            font-weight: 500;
+        }
+
+        .classification-note {
+            background-color: rgba(139, 69, 19, 0.04);
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #555;
+            border-left: 3px solid var(--primary-light);
+        }
     </style>
 </head>
 <body>
@@ -163,12 +315,10 @@
                 </div>
                 <p class="tagline">Data Visualizations Dashboard</p>
             </header>
-            
             <div class="dashboard-header">
                 <h2>Secondary Mushroom Dataset Analysis</h2>
                 <p>Visual exploration and insights from the UCI Machine Learning Repository's Secondary Mushroom Dataset</p>
             </div>
-            
             <!-- Quick Navigation -->
             <div class="viz-controls">
                 <h5>Jump to Section:</h5>
@@ -189,69 +339,91 @@
             <div class="section-intro">
                 <p>The Secondary Mushroom Dataset from UCI contains 61,069 synthetic mushroom samples based on 173 real mushroom species. Each sample is classified as either edible (e) or poisonous (p), with the poisonous class also containing mushrooms of unknown edibility as a safety precaution. The dataset provides a rich variety of features describing visual characteristics and growing environment of mushrooms.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-8">
+                    <!-- Distribution of Edible vs. Poisonous Mushrooms - Enhanced Version -->
                     <div class="card viz-card">
-                        <div class="card-body">
-                            <h4>Distribution of Edible vs. Poisonous Mushrooms</h4>
-                            <div class="chart-container">
-                                {% if viz_data.class_distribution %}
-                                    <img src="data:image/png;base64,{{ viz_data.class_distribution }}" alt="Class Distribution" class="viz-img">
-                                    <div class="chart-overlay">
-                                        <p>Click to view full size</p>
-                                    </div>
-                                {% else %}
-                                    <p class="text-danger">Visualization not available</p>
-                                    {% if viz_data.errors and viz_data.errors.class_distribution %}
-                                        <p class="text-muted small">Error: {{ viz_data.errors.class_distribution }}</p>
-                                    {% endif %}
-                                {% endif %}
+                      <div class="card-body">
+                        <h4 class="mb-3"><i class="fas fa-chart-bar me-2 text-primary-light"></i>Distribution of Edible vs. Poisonous Mushrooms</h4>
+                        <div class="chart-container">
+                          {% if viz_data.class_distribution %}
+                            <img src="data:image/png;base64,{{ viz_data.class_distribution }}" alt="Class Distribution" class="viz-img">
+                            <div class="chart-overlay">
+                              <p><i class="fas fa-search-plus me-2"></i>View Full Size</p>
                             </div>
-                            <div class="viz-description">
-                                <p>This chart shows the distribution of edible and poisonous mushrooms in our dataset. The distribution is deliberately designed to be slightly imbalanced with more poisonous samples (55.5%) than edible ones (44.5%).</p>
-                                <div class="insights">
-                                    <strong>Insight:</strong> The class imbalance reflects real-world scenarios where poisonous mushrooms appear in greater variety than edible ones. This slight imbalance helps the model prioritize safety by giving more weight to poisonous examples.
-                                </div>
-                            </div>
+                          {% else %}
+                            <img src="{{ url_for('static', filename='img/class_distribution.png') }}" alt="Class Distribution" class="viz-img">
+                          {% endif %}
                         </div>
+                        <div class="viz-description">
+                          <p>This chart shows the distribution of edible and poisonous mushrooms in our dataset. The distribution is deliberately designed to be slightly imbalanced with more poisonous samples (55.5%) than edible ones (44.5%).</p>
+                          
+                          <div class="distribution-stats mt-3">
+                            <div class="row text-center">
+                              <div class="col-6">
+                                <div class="stat-box">
+                                  <span class="stat-label">Edible Samples</span>
+                                  <span class="stat-value">27,181</span>
+                                  <span class="stat-badge bg-success">44.5%</span>
+                                </div>
+                              </div>
+                              <div class="col-6">
+                                <div class="stat-box">
+                                  <span class="stat-label">Poisonous Samples</span>
+                                  <span class="stat-value">33,888</span>
+                                  <span class="stat-badge bg-danger">55.5%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div class="insights mt-3">
+                            <strong>Key Insight:</strong> The class imbalance reflects real-world scenarios where poisonous mushrooms appear in greater variety than edible ones. This slight imbalance helps the model prioritize safety by giving more weight to poisonous examples.
+                          </div>
+                          
+                          <div class="classification-note mt-3">
+                            <i class="fas fa-info-circle me-2 text-primary-light"></i>
+                            <span>Safety-conscious classification models often benefit from having more examples of the dangerous class to minimize the risk of false negatives, which in this domain could have serious health consequences.</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="card viz-card">
                         <div class="card-body">
-                            <h4>Dataset Statistics</h4>
+                            <h4 class="mb-3"><i class="fas fa-table me-2 text-primary-light"></i>Dataset Statistics</h4>
                             <div class="dataset-stats">
-                                <table class="table table-bordered">
+                                <table class="table table-bordered table-hover">
                                     <tbody>
                                         <tr>
                                             <th>Total Samples</th>
-                                            <td>61,069</td>
+                                            <td><strong>61,069</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Features</th>
-                                            <td>20</td>
+                                            <td><strong>20</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Categorical Features</th>
-                                            <td>17</td>
+                                            <td><strong>17</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Numerical Features</th>
-                                            <td>3</td>
+                                            <td><strong>3</strong></td>
                                         </tr>
                                         <tr>
                                             <th>Missing Values</th>
-                                            <td>Yes (varies by feature)</td>
+                                            <td>Yes <span class="text-muted">(varies by feature)</span></td>
                                         </tr>
                                         <tr>
                                             <th>Edible Samples</th>
-                                            <td>27,181 (44.5%)</td>
+                                            <td><strong>27,181</strong> <span class="badge bg-success">44.5%</span></td>
                                         </tr>
                                         <tr>
                                             <th>Poisonous Samples</th>
-                                            <td>33,888 (55.5%)</td>
+                                            <td><strong>33,888</strong> <span class="badge bg-danger">55.5%</span></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -259,12 +431,22 @@
                         </div>
                     </div>
                     
+                    <!-- Data Source Card - Improved Version -->
                     <div class="card viz-card mt-4">
                         <div class="card-body">
-                            <h4>Data Source</h4>
-                            <p>This dataset is part of the UCI Machine Learning Repository:</p>
-                            <p><a href="https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">UCI Secondary Mushroom Dataset</a></p>
-                            <p class="small text-muted mt-3">Created by Dennis Wagner as part of research at Philipps-University Marburg, Bioinformatics Division.</p>
+                            <h4 class="mb-3"><i class="fas fa-database me-2 text-primary-light"></i>Data Source</h4>
+                            <p class="mb-3">This dataset is part of the UCI Machine Learning Repository:</p>
+                            <div class="d-grid gap-2 mb-3">
+                                <a href="https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset" 
+                                   target="_blank" rel="noopener noreferrer" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-external-link-alt me-2"></i>UCI Secondary Mushroom Dataset
+                                </a>
+                            </div>
+                            <div class="attribution">
+                                <i class="fas fa-user-edit me-2"></i>
+                                <span>Created by Dennis Wagner as part of research at Philipps-University Marburg, Bioinformatics Division.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -275,7 +457,6 @@
             <div class="section-intro">
                 <p>The dataset contains 20 features describing various mushroom characteristics. Of these, 17 are categorical (like cap-shape, gill-color) and 3 are numerical (cap-diameter, stem-height, stem-width). Understanding these features is crucial for accurate classification and for identifying which visual characteristics are most important for determining edibility.</p>
             </div>
-            
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="methodology-card">
@@ -288,8 +469,7 @@
                         </ul>
                     </div>
                 </div>
-            </div>
-            
+            </div>  
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -377,7 +557,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="row mt-4">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -412,7 +591,6 @@
             <div class="section-intro">
                 <p>Understanding how feature values are distributed across edible and poisonous mushrooms helps identify important patterns for classification. The following visualizations show how numerical and categorical features are distributed and what that reveals about mushroom edibility.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -440,7 +618,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -474,7 +651,6 @@
             <div class="section-intro">
                 <p>Feature correlations reveal how different mushroom characteristics relate to each other and to edibility. Strong correlations with the target variable (edibility) indicate highly predictive features, while correlations between features may reveal redundancy in the data.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -502,7 +678,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -529,7 +704,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -563,7 +737,6 @@
             <div class="section-intro">
                 <p>Dimension reduction techniques help visualize high-dimensional data like our mushroom dataset (which has 20 features, expanding to over 100 after one-hot encoding) in 2D or 3D space. These visualizations can reveal patterns, clusters, and separations between edible and poisonous classes that might not be apparent when examining individual features.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -591,7 +764,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="methodology-card">
                         <h5>How to Interpret Dimension Reduction Plots</h5>
@@ -612,7 +784,6 @@
             <div class="section-intro">
                 <p>Understanding how our machine learning model makes decisions is crucial, especially for a safety-critical application like mushroom edibility classification. These visualizations help explain model behavior, performance metrics, and confidence levels.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -640,7 +811,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -667,7 +837,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -701,7 +870,6 @@
             <div class="section-intro">
                 <p>Comparing the performance of different machine learning algorithms on the mushroom classification task helps identify the most suitable model. The following visualization shows how various models perform across key metrics including accuracy, precision, recall, and F1-score.</p>
             </div>
-
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -730,13 +898,12 @@
                     </div>
                 </div>
             </div>
-
+            
             <!-- Feature Importance Section -->
             <h3 id="feature-importance" class="section-header">Feature Importance <span class="category-badge">Explanatory</span></h3>
             <div class="section-intro">
                 <p>Understanding which mushroom characteristics are most important for predicting edibility provides valuable insights for identification in the field. These visualizations reveal the most influential features according to different measurement techniques.</p>
             </div>
-            
             <div class="row">
                 <div class="col-md-12">
                     <div class="card viz-card">
@@ -765,7 +932,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -792,7 +958,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-12 mt-4">
                     <div class="card viz-card">
                         <div class="card-body">
@@ -900,36 +1065,112 @@
         // Enable image enlargement on click
         document.addEventListener('DOMContentLoaded', function() {
             const vizImages = document.querySelectorAll('.viz-img');
+            
             vizImages.forEach(img => {
-                img.addEventListener('click', function() {
-                    const modal = document.createElement('div');
-                    modal.style.position = 'fixed';
-                    modal.style.top = '0';
-                    modal.style.left = '0';
-                    modal.style.width = '100%';
-                    modal.style.height = '100%';
-                    modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
-                    modal.style.display = 'flex';
-                    modal.style.alignItems = 'center';
-                    modal.style.justifyContent = 'center';
-                    modal.style.zIndex = '1000';
-                    modal.style.cursor = 'pointer';
-                    const enlargedImg = document.createElement('img');
-                    enlargedImg.src = this.src;
-                    enlargedImg.style.maxWidth = '90%';
-                    enlargedImg.style.maxHeight = '90%';
-                    enlargedImg.style.objectFit = 'contain';
-                    enlargedImg.style.border = '2px solid white';
-                    enlargedImg.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)';
-                    modal.appendChild(enlargedImg);
-                    document.body.appendChild(modal);
-                    modal.addEventListener('click', function() {
-                        document.body.removeChild(modal);
+                // Make the entire chart container clickable
+                const container = img.closest('.chart-container');
+                if (container) {
+                    container.addEventListener('click', function() {
+                        openImageModal(img.src);
                     });
+                }
+                
+                // Also handle direct clicks on the image
+                img.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent triggering the container click event
+                    openImageModal(this.src);
                 });
-                // Add pointer cursor
-                img.style.cursor = 'pointer';
+                
+                // Set proper cursor
+                img.style.cursor = 'zoom-in';
             });
+            
+            function openImageModal(imgSrc) {
+                // Create modal container
+                const modal = document.createElement('div');
+                modal.className = 'image-modal';
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                modal.style.display = 'flex';
+                modal.style.flexDirection = 'column';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+                modal.style.zIndex = '2000';
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.3s ease';
+                
+                // Create close button
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.position = 'absolute';
+                closeBtn.style.top = '20px';
+                closeBtn.style.right = '30px';
+                closeBtn.style.backgroundColor = 'transparent';
+                closeBtn.style.border = 'none';
+                closeBtn.style.color = 'white';
+                closeBtn.style.fontSize = '40px';
+                closeBtn.style.cursor = 'pointer';
+                closeBtn.style.zIndex = '2001';
+                closeBtn.title = 'Close (Esc)';
+                
+                // Create image element
+                const enlargedImg = document.createElement('img');
+                enlargedImg.src = imgSrc;
+                enlargedImg.style.maxWidth = '90%';
+                enlargedImg.style.maxHeight = '85%';
+                enlargedImg.style.objectFit = 'contain';
+                enlargedImg.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+                enlargedImg.style.border = '2px solid rgba(255,255,255,0.2)';
+                enlargedImg.style.borderRadius = '4px';
+                
+                // Create caption/instruction
+                const caption = document.createElement('div');
+                caption.innerHTML = 'Click anywhere or press ESC to close';
+                caption.style.color = 'white';
+                caption.style.marginTop = '15px';
+                caption.style.fontSize = '14px';
+                caption.style.opacity = '0.7';
+                
+                // Append elements to modal
+                modal.appendChild(closeBtn);
+                modal.appendChild(enlargedImg);
+                modal.appendChild(caption);
+                document.body.appendChild(modal);
+                
+                // Trigger reflow for transition to work
+                modal.offsetHeight;
+                // Show modal with transition
+                modal.style.opacity = '1';
+                
+                // Close modal on click
+                modal.addEventListener('click', function(e) {
+                    if (e.target !== enlargedImg) {
+                        closeModal();
+                    }
+                });
+                
+                // Close on close button click
+                closeBtn.addEventListener('click', closeModal);
+                
+                // Close on ESC key
+                document.addEventListener('keydown', function escHandler(e) {
+                    if (e.key === 'Escape') {
+                        closeModal();
+                    }
+                });
+                
+                function closeModal() {
+                    modal.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(modal);
+                    }, 300);
+                }
+            }
+            
             // Active nav handling
             const navLinks = document.querySelectorAll('.viz-nav a');
             const sections = document.querySelectorAll('.section-header');
@@ -951,6 +1192,7 @@
             // Initial call and scroll event listener
             setActiveNav();
             window.addEventListener('scroll', setActiveNav);
+            
             // Animation on scroll
             const cards = document.querySelectorAll('.viz-card');
             function checkVisibility() {
