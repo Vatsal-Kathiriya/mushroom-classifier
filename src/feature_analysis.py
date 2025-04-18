@@ -25,31 +25,37 @@ def plot_feature_importance(model, feature_names, top_n=20, save_path=None, show
     top_importances = importances[top_indices]
     top_feature_names = [feature_names[i] for i in top_indices]
     
-    # Create color palette
-    colors = sns.color_palette("YlGn", len(top_importances))
+    # Create figure with larger size for better readability
+    fig, ax = plt.subplots(figsize=(12, 10))
     
-    # Create figure and axes objects explicitly
-    fig, ax = plt.subplots(figsize=(12, 8))
+    # Create a colormap identical to the reference image - yellowgreen gradient
+    colors = plt.cm.YlGn(np.linspace(0.1, 0.9, len(top_importances)))
     
-    # Plot on the specific axes
-    bars = ax.barh(range(len(top_importances)), top_importances, align='center', color=colors)
-    ax.set_yticks(range(len(top_importances)))
+    # Plot horizontal bars with decreasing importance
+    y_pos = np.arange(len(top_feature_names))
+    ax.barh(y_pos, top_importances, align='center', color=colors)
+    
+    # Set y-tick labels - features ordered by importance
+    ax.set_yticks(y_pos)
     ax.set_yticklabels(top_feature_names)
+    
+    # Add labels and title that match reference
     ax.set_xlabel('Feature Importance', fontsize=12)
     ax.set_ylabel('Features', fontsize=12)
     ax.set_title('Top Features for Mushroom Classification', fontsize=14)
     
-    # Add colorbar properly by specifying the axes
+    # Add colorbar with proper formatting
     sm = plt.cm.ScalarMappable(cmap="YlGn", norm=plt.Normalize(0, max(top_importances)))
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax)  # Specify which axes to use
+    cbar = fig.colorbar(sm, ax=ax)
     cbar.set_label('Importance', fontsize=10)
     
+    # Improve layout
     plt.tight_layout()
     
     # Save the plot
     if save_path:
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
     elif not show:
         save_plot('feature_importance.png')
     

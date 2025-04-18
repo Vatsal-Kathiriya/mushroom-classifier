@@ -370,6 +370,9 @@
                                 </table>
                             </div>
                             <p class="text-center mt-3"><small>Showing 10 of 20 features. All features are used in model training.</small></p>
+                            <div class="alert alert-info mt-3 small">
+                                <strong>Note:</strong> This table describes features from the original dataset used for analysis. The interactive classifier on the main page uses a refined set of the most important features identified during the model selection process (Phase 2).
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -740,17 +743,18 @@
                         <div class="card-body">
                             <h4>Feature Importance from Tree-based Model</h4>
                             <div class="chart-container">
-                                {% if viz_data.feature_importance %}
-                                    <img src="data:image/png;base64,{{ viz_data.feature_importance }}" alt="Feature Importance" class="viz-img">
-                                    <div class="chart-overlay">
-                                        <p>Click to view full size</p>
-                                    </div>
+                                {% if viz_data.primary_feature_importance %}
+                                    <img src="data:image/png;base64,{{ viz_data.primary_feature_importance }}" alt="Feature Importance" class="viz-img">
+                                {% elif viz_data.model_feature_importance_image %}
+                                    <img src="data:image/png;base64,{{ viz_data.model_feature_importance_image }}" alt="Feature Importance" class="viz-img">
+                                {% elif viz_data.static_feature_importance_image %}
+                                    <img src="data:image/png;base64,{{ viz_data.static_feature_importance_image }}" alt="Feature Importance" class="viz-img">
                                 {% else %}
-                                    <p class="text-danger">Visualization not available</p>
-                                    {% if viz_data.errors and viz_data.errors.feature_importance %}
-                                        <p class="text-muted small">Error: {{ viz_data.errors.feature_importance }}</p>
-                                    {% endif %}
+                                    <img src="{{ url_for('static', filename='generated_viz/feature_importance.png') }}" alt="Feature Importance" class="viz-img">
                                 {% endif %}
+                                <div class="chart-overlay">
+                                    <p>Click to view full size</p>
+                                </div>
                             </div>
                             <div class="viz-description">
                                 <p>This chart shows feature importance derived from our Random Forest model, which measures how much each feature contributes to decreasing impurity when making splits in the decision trees. Higher values indicate more important features for classification.</p>
@@ -804,48 +808,60 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>spore-print-color</td>
-                                            <td>Place cap on paper overnight to observe spore color; white spores often indicate caution</td>
-                                            <td>Very High</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>odor</td>
-                                            <td>Smell the mushroom: sweet or almond scents tend toward edible, while foul odors often indicate toxicity</td>
-                                            <td>High</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>gill-color</td>
-                                            <td>Observe under the cap: certain gill colors correlate strongly with edibility or toxicity</td>
-                                            <td>High</td>
-                                        </tr>
-                                        <tr>
-                                            <td>4</td>
-                                            <td>ring-type</td>
-                                            <td>Examine the ring on stem (when present): different types correlate with certain species</td>
-                                            <td>Medium-High</td>
-                                        </tr>
-                                        <tr>
-                                            <td>5</td>
-                                            <td>gill-size</td>
-                                            <td>Note the relative size of the gills compared to cap thickness</td>
-                                            <td>Medium</td>
-                                        </tr>
-                                        <tr>
-                                            <td>6</td>
-                                            <td>stalk-surface-above-ring</td>
-                                            <td>Examine stem texture above the ring for distinctive patterns</td>
-                                            <td>Medium</td>
-                                        </tr>
-                                        <tr>
-                                            <td>7</td>
-                                            <td>habitat</td>
-                                            <td>Note where the mushroom is growing; many species have specific habitat preferences</td>
-                                            <td>Medium-Low</td>
-                                        </tr>
+                                        {% if viz_data.key_features %}
+                                            {% for feature in viz_data.key_features %}
+                                                <tr>
+                                                    <td>{{ loop.index }}</td>
+                                                    <td>{{ feature }}</td>
+                                                    <td>{{ viz_data.feature_tips.get(feature, "Observe this feature carefully when identifying mushrooms") }}</td>
+                                                    <td>{{ viz_data.feature_importance_levels.get(feature, "Medium") }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td>1</td>
+                                                <td>spore-print-color</td>
+                                                <td>Place cap on paper overnight to observe spore color; white spores often indicate caution</td>
+                                                <td>Very High</td>
+                                            </tr>
+                                            <tr>
+                                                <td>2</td>
+                                                <td>odor</td>
+                                                <td>Smell the mushroom: sweet or almond scents tend toward edible, while foul odors often indicate toxicity</td>
+                                                <td>High</td>
+                                            </tr>
+                                            <!-- ...existing feature rows... -->
+                                            <tr>
+                                                <td>3</td>
+                                                <td>gill-color</td>
+                                                <td>Observe under the cap: certain gill colors correlate strongly with edibility or toxicity</td>
+                                                <td>High</td>
+                                            </tr>
+                                            <tr>
+                                                <td>4</td>
+                                                <td>ring-type</td>
+                                                <td>Examine the ring on stem (when present): different types correlate with certain species</td>
+                                                <td>Medium-High</td>
+                                            </tr>
+                                            <tr>
+                                                <td>5</td>
+                                                <td>gill-size</td>
+                                                <td>Note the relative size of the gills compared to cap thickness</td>
+                                                <td>Medium</td>
+                                            </tr>
+                                            <tr>
+                                                <td>6</td>
+                                                <td>stalk-surface-above-ring</td>
+                                                <td>Examine stem texture above the ring for distinctive patterns</td>
+                                                <td>Medium</td>
+                                            </tr>
+                                            <tr>
+                                                <td>7</td>
+                                                <td>habitat</td>
+                                                <td>Note where the mushroom is growing; many species have specific habitat preferences</td>
+                                                <td>Medium-Low</td>
+                                            </tr>
+                                        {% endif %}
                                     </tbody>
                                 </table>
                             </div>
@@ -859,7 +875,7 @@
                     </div>
                 </div>
             </div>
-                
+            
             <div class="text-center mt-5 mb-5">
                 <a href="{{ url_for('index') }}" class="btn btn-back">Back to Classifier</a>
             </div>
@@ -874,19 +890,16 @@
                 </div>
             </div>
         </div>
-        
         <footer>
             <p>&copy; 2025 Mushroom Classifier | <a href="{{ url_for('about') }}">About</a> | <a href="{{ url_for('index') }}">Classify</a></p>
         </footer>
     </div>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/sweet.js') }}"></script>
     <script>
         // Enable image enlargement on click
         document.addEventListener('DOMContentLoaded', function() {
             const vizImages = document.querySelectorAll('.viz-img');
-            
             vizImages.forEach(img => {
                 img.addEventListener('click', function() {
                     const modal = document.createElement('div');
@@ -901,7 +914,6 @@
                     modal.style.justifyContent = 'center';
                     modal.style.zIndex = '1000';
                     modal.style.cursor = 'pointer';
-                    
                     const enlargedImg = document.createElement('img');
                     enlargedImg.src = this.src;
                     enlargedImg.style.maxWidth = '90%';
@@ -909,33 +921,26 @@
                     enlargedImg.style.objectFit = 'contain';
                     enlargedImg.style.border = '2px solid white';
                     enlargedImg.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)';
-                    
                     modal.appendChild(enlargedImg);
                     document.body.appendChild(modal);
-                    
                     modal.addEventListener('click', function() {
                         document.body.removeChild(modal);
                     });
                 });
-                
                 // Add pointer cursor
                 img.style.cursor = 'pointer';
             });
-            
             // Active nav handling
             const navLinks = document.querySelectorAll('.viz-nav a');
             const sections = document.querySelectorAll('.section-header');
-            
             function setActiveNav() {
                 let current = '';
-                
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
                     if (window.pageYOffset >= sectionTop - 200) {
                         current = section.getAttribute('id');
                     }
                 });
-                
                 navLinks.forEach(link => {
                     link.classList.remove('active');
                     if (link.getAttribute('href').slice(1) === current) {
@@ -943,28 +948,22 @@
                     }
                 });
             }
-            
             // Initial call and scroll event listener
             setActiveNav();
             window.addEventListener('scroll', setActiveNav);
-            
             // Animation on scroll
             const cards = document.querySelectorAll('.viz-card');
-            
             function checkVisibility() {
                 cards.forEach(card => {
                     const rect = card.getBoundingClientRect();
                     const isVisible = (rect.top <= window.innerHeight * 0.8);
-                    
                     if (isVisible) {
                         card.classList.add('fade-in');
                     }
                 });
             }
-            
             // Initial check
             checkVisibility();
-            
             // Check on scroll
             window.addEventListener('scroll', checkVisibility);
         });
