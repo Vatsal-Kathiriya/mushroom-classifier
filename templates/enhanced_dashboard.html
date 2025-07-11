@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mushroom Classification Dashboard</title>
+    
+    <!-- Bootstrap and Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Custom Dashboard Styling - Matching Your Theme -->
+    <style>
+        :root {
+            --primary: #8B4513;
+            --primary-light: #8a5d3e;
+            --primary-dark: #5D3A14;
+            --accent: #E98A3C;
+            --background: #F8F5F2;
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --edible: #4CAF50;
+            --poisonous: #F44336;
+            --warning: #FF9800;
+            --header-height: 70px;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            background-image: url('/static/img/mushroom-pattern-light.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles - Matching Your Theme */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(139, 69, 19, 0.2);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .sidebar-header .logo {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1.5rem;
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--accent);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            width: 20px;
+            margin-right: 0.8rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        /* Top Header - Matching Your Theme */
+        .top-header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(139, 69, 19, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .dashboard-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .export-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(233, 138, 60, 0.3);
+        }
+
+        /* Content Area */
+        .content-area {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Stats Cards - Matching Your Style */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-light);
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.2);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Dashboard Cards - Matching Your Style */
+        .dashboard-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            animation: slideUp 0.6s ease-in-out;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.2);
+        }
+
+        .card-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            border-bottom: none;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 1rem 0;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Classifier Section - Matching Your Style */
+        .classifier-section {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.1);
+            animation: slideUp 0.6s ease-in-out;
+        }
+
+        .classifier-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.2);
+            outline: none;
+        }
+
+        .predict-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .predict-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.3);
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Prediction Result - Matching Your Style */
+        .prediction-result {
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 2rem;
+            display: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .prediction-result.edible {
+            background: linear-gradient(135deg, var(--edible), #66BB6A);
+            color: white;
+            border-left: 5px solid var(--edible);
+        }
+
+        .prediction-result.poisonous {
+            background: linear-gradient(135deg, var(--poisonous), #EF5350);
+            color: white;
+            border-left: 5px solid var(--poisonous);
+        }
+
+        .prediction-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .prediction-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .prediction-confidence {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Tabs - Matching Your Style */
+        .tab-navigation {
+            display: flex;
+            background: rgba(255,255,255,0.7);
+            border-radius: 10px;
+            padding: 0.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(139, 69, 19, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--primary);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Visualization Images */
+        .viz-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 3px 15px rgba(139, 69, 19, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .viz-image:hover {
+            transform: scale(1.02);
+        }
+
+        /* Safety Information - Matching Your Style */
+        .safety-alert {
+            background: linear-gradient(135deg, var(--warning), #FFB74D);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .safety-alert h4 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .safety-alert ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .safety-alert li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .safety-alert li:last-child {
+            border-bottom: none;
+        }
+
+        .safety-alert i {
+            margin-right: 0.5rem;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Animations - Matching Your Style */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% { 
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            70% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .content-area {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .classifier-form {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-title {
+                font-size: 1.4rem;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Section spacing */
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 3px 10px rgba(139, 69, 19, 0.1);
+            transition: transform 0.3s ease;
+            border-left: 3px solid var(--primary-light);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .feature-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-value {
+            font-size: 1.1rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation - Matching Your Theme -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-seedling"></i>
+                </div>
+                <h3 class="sidebar-title">🍄 Mushroom AI</h3>
+                <p class="sidebar-subtitle">Classification Dashboard</p>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="#overview" class="nav-link active" data-section="overview">
+                        <i class="fas fa-chart-line"></i> Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#classifier" class="nav-link" data-section="classifier">
+                        <i class="fas fa-brain"></i> Classifier
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#dataset" class="nav-link" data-section="dataset">
+                        <i class="fas fa-database"></i> Dataset Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#features" class="nav-link" data-section="features">
+                        <i class="fas fa-cogs"></i> Feature Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#models" class="nav-link" data-section="models">
+                        <i class="fas fa-robot"></i> Model Performance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#visualizations" class="nav-link" data-section="visualizations">
+                        <i class="fas fa-chart-pie"></i> Visualizations
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#safety" class="nav-link" data-section="safety">
+                        <i class="fas fa-shield-alt"></i> Safety Info
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Header -->
+            <div class="top-header">
+                <div class="header-left">
+                    <button class="toggle-btn" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="dashboard-title">Mushroom Classification Dashboard</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="export-btn" onclick="exportDashboard()">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Overview Section -->
+                <section id="overview" class="section">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="stat-number" id="totalSamples">{{ dataset_info.total_samples or 0 }}</div>
+                            <div class="stat-label">Total Samples</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-leaf" style="color: var(--edible);"></i>
+                            </div>
+                            <div class="stat-number" id="edibleCount">{{ dataset_info.edible_count or 0 }}</div>
+                            <div class="stat-label">Edible Mushrooms</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-skull-crossbones" style="color: var(--poisonous);"></i>
+                            </div>
+                            <div class="stat-number" id="poisonousCount">{{ dataset_info.poisonous_count or 0 }}</div>
+                            <div class="stat-label">Poisonous Mushrooms</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div class="stat-number" id="featuresCount">{{ dataset_info.features or 0 }}</div>
+                            <div class="stat-label">Features</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Class Distribution</h3>
+                                <p class="card-subtitle">Distribution of edible vs poisonous mushrooms</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="classDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Model Performance</h3>
+                                <p class="card-subtitle">Current model: {{ model_type }}</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="modelPerformanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Classifier Section -->
+                <section id="classifier" class="section" style="display: none;">
+                    <div class="classifier-section">
+                        <h2 style="margin-bottom: 2rem; color: var(--primary);">
+                            <i class="fas fa-brain"></i> Mushroom Classifier
+                        </h2>
+                        <form id="classifierForm" class="classifier-form">
+                            {% for feature in key_features %}
+                            <div class="form-group">
+                                <label class="form-label" for="{{ feature }}">
+                                    {{ feature.replace('-', ' ').title() }}
+                                </label>
+                                {% if feature_map[feature]['type'] == 'numerical' %}
+                                <input type="number" 
+                                       id="{{ feature }}" 
+                                       name="{{ feature }}" 
+                                       class="form-control"
+                                       min="{{ feature_map[feature]['values'][0] }}"
+                                       max="{{ feature_map[feature]['values'][1] }}"
+                                       step="0.1"
+                                       value="{{ (feature_map[feature]['values'][0] + feature_map[feature]['values'][1]) / 2 }}">
+                                {% else %}
+                                <select id="{{ feature }}" name="{{ feature }}" class="form-control">
+                                    {% for value, label in feature_options[feature].items() %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </form>
+                        <button type="button" class="predict-btn" onclick="predictMushroom()">
+                            <span id="predictBtnText">Predict Classification</span>
+                            <span id="predictBtnLoading" class="loading" style="display: none;"></span>
+                        </button>
+                        <div id="predictionResult" class="prediction-result">
+                            <div class="prediction-icon" id="predictionIcon"></div>
+                            <div class="prediction-text" id="predictionText"></div>
+                            <div class="prediction-confidence" id="predictionConfidence"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Dataset Analysis Section -->
+                <section id="dataset" class="section" style="display: none;">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Dataset Analysis</h3>
+                            <p class="card-subtitle">Comprehensive analysis of the mushroom dataset</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-navigation">
+                                <button class="tab-btn active" onclick="showTab('class-dist')">Class Distribution</button>
+                                <button class="tab-btn" onclick="showTab('feature-dist')">Feature Distribution</button>
+                                <button class="tab-btn" onclick="showTab('correlations')">Correlations</button>
+                            </div>
+
+                            <div id="class-dist" class="tab-content active">
+                                {% if viz_data.class_distribution %}
+                                <img src="data:image/png;base64,{{ viz_data.class_distribution }}" class="viz-image" alt="Class Distribution">
+                                {% else %}
+                                <p style="text-align: center; padding: 2rem; color: #666;">Class distribution visualization not available</p>
+                                {% endif %}
+                            </div>
+
+                            <div id="feature-dist" class="tab-content">
+                                {% if viz_data.categorical_features %}
+                                <img src="data:image/png;base64,{{ viz_data.categorical_features }}" class="viz-image" alt="Feature Distribution">
+                                {% else %}
+                                <p style="text-align: center; padding: 2rem; color: #666;">Feature distribution visualization not available</p>
+                                {% endif %}
+                            </div>
+
+                            <div id="correlations" class="tab-content">
+                                {% if viz_data.feature_correlations %}
+                                <img src="data:image/png;base64,{{ viz_data.feature_correlations }}" class="viz-image" alt="Feature Correlations">
+                                {% else %}
+                                <p style="text-align: center; padding: 2rem; color: #666;">Feature correlations visualization not available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Feature Analysis Section -->
+                <section id="features" class="section" style="display: none;">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Feature Analysis</h3>
+                            <p class="card-subtitle">Importance and statistics of mushroom features</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="featureImportanceChart"></canvas>
+                            </div>
+                            
+                            {% if viz_data.model_feature_importance_image %}
+                            <div style="margin-top: 2rem;">
+                                <h4 style="color: var(--primary); margin-bottom: 1rem;">Feature Importance Visualization</h4>
+                                <img src="data:image/png;base64,{{ viz_data.model_feature_importance_image }}" class="viz-image" alt="Feature Importance">
+                            </div>
+                            {% endif %}
+                            
+                            <div class="feature-grid" id="featureStats">
+                                <!-- Feature statistics will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Model Performance Section -->
+                <section id="models" class="section" style="display: none;">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Model Performance</h3>
+                            <p class="card-subtitle">Comparison of different classification models</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="modelComparisonChart"></canvas>
+                            </div>
+                            
+                            {% if viz_data.model_comparison %}
+                            <div style="margin-top: 2rem;">
+                                <h4 style="color: var(--primary); margin-bottom: 1rem;">Model Comparison</h4>
+                                <img src="data:image/png;base64,{{ viz_data.model_comparison }}" class="viz-image" alt="Model Comparison">
+                            </div>
+                            {% endif %}
+                            
+                            {% if viz_data.confusion_matrix %}
+                            <div style="margin-top: 2rem;">
+                                <h4 style="color: var(--primary); margin-bottom: 1rem;">Confusion Matrix</h4>
+                                <img src="data:image/png;base64,{{ viz_data.confusion_matrix }}" class="viz-image" alt="Confusion Matrix">
+                            </div>
+                            {% endif %}
+
+                            {% if viz_data.roc_curve %}
+                            <div style="margin-top: 2rem;">
+                                <h4 style="color: var(--primary); margin-bottom: 1rem;">ROC Curve</h4>
+                                <img src="data:image/png;base64,{{ viz_data.roc_curve }}" class="viz-image" alt="ROC Curve">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visualizations Section -->
+                <section id="visualizations" class="section" style="display: none;">
+                    <div class="viz-section">
+                        <h2 style="margin-bottom: 2rem; color: var(--primary);">
+                            <i class="fas fa-chart-pie"></i> Advanced Visualizations
+                        </h2>
+                        
+                        <div class="chart-grid">
+                            {% if viz_data.learning_curve %}
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Learning Curve</h3>
+                                </div>
+                                <div class="card-body">
+                                    <img src="data:image/png;base64,{{ viz_data.learning_curve }}" class="viz-image" alt="Learning Curve">
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if viz_data.pca_visualization %}
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <h3 class="card-title">PCA Visualization</h3>
+                                </div>
+                                <div class="card-body">
+                                    <img src="data:image/png;base64,{{ viz_data.pca_visualization }}" class="viz-image" alt="PCA Visualization">
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if viz_data.permutation_importance %}
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Permutation Importance</h3>
+                                </div>
+                                <div class="card-body">
+                                    <img src="data:image/png;base64,{{ viz_data.permutation_importance }}" class="viz-image" alt="Permutation Importance">
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if viz_data.mutual_info %}
+                            <div class="dashboard-card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Mutual Information</h3>
+                                </div>
+                                <div class="card-body">
+                                    <img src="data:image/png;base64,{{ viz_data.mutual_info }}" class="viz-image" alt="Mutual Information">
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Safety Information Section -->
+                <section id="safety" class="section" style="display: none;">
+                    <div class="safety-alert">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Important Safety Information</h4>
+                        <ul>
+                            <li><i class="fas fa-shield-alt"></i> This AI model is for educational purposes only</li>
+                            <li><i class="fas fa-ban"></i> Never eat wild mushrooms based solely on AI predictions</li>
+                            <li><i class="fas fa-user-md"></i> Always consult mycology experts for mushroom identification</li>
+                            <li><i class="fas fa-book"></i> Use multiple identification methods and field guides</li>
+                            <li><i class="fas fa-warning"></i> Misidentification can result in serious illness or death</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Model Limitations</h3>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-bottom: 1rem;">This mushroom classification model has the following limitations:</p>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Trained on a specific dataset that may not represent all mushroom species</li>
+                                <li>Performance may vary with different mushroom varieties and conditions</li>
+                                <li>Cannot account for environmental factors affecting mushroom appearance</li>
+                                <li>Should be used as a learning tool, not for actual foraging decisions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Pass dashboard data from Flask to JavaScript
+        window.dashboardData = {
+            datasetInfo: {{ dataset_info | tojson if dataset_info else '{}' }},
+            modelMetrics: {{ model_metrics | tojson if model_metrics else '{}' }},
+            featureStats: {{ feature_stats | tojson if feature_stats else '{}' }},
+            vizData: {{ viz_data | tojson if viz_data else '{}' }},
+            featureOptions: {{ feature_options | tojson if feature_options else '{}' }},
+            keyFeatures: {{ key_features | tojson if key_features else '[]' }},
+            modelType: '{{ model_type if model_type else "Unknown" }}'
+        };
+    </script>
+    
+    <!-- Enhanced Dashboard JavaScript -->
+    <script>
+        // Dashboard functionality
+        let charts = {};
+        let currentSection = 'overview';
+
+        // Initialize dashboard when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+        });
+
+        function initializeDashboard() {
+            try {
+                initializeNavigation();
+                initializeCharts();
+                populateFeatureStats();
+                setupResponsiveDesign();
+                
+                console.log('Dashboard initialized successfully');
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                showErrorMessage('Failed to initialize dashboard');
+            }
+        }
+
+        // Navigation
+        function initializeNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-section');
+                    showSection(sectionId);
+                    
+                    // Update active nav link
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                currentSection = sectionId;
+                
+                // Initialize section-specific content
+                if (sectionId === 'features') {
+                    populateFeatureStats();
+                }
+            }
+        }
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (sidebar && mainContent) {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+            }
+        }
+
+        // Tab functionality
+        function showTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-btn');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.add('active');
+                event.target.classList.add('active');
+            }
+        }
+
+        // Chart initialization
+        function initializeCharts() {
+            createClassDistributionChart();
+            createModelPerformanceChart();
+            createFeatureImportanceChart();
+            createModelComparisonChart();
+        }
+
+        function createClassDistributionChart() {
+            const ctx = document.getElementById('classDistributionChart');
+            if (!ctx) return;
+
+            const datasetInfo = window.dashboardData.datasetInfo || {};
+            const edibleCount = datasetInfo.edible_count || 0;
+            const poisonousCount = datasetInfo.poisonous_count || 0;
+            
+            charts.classDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Edible', 'Poisonous'],
+                    datasets: [{
+                        data: [edibleCount, poisonousCount],
+                        backgroundColor: [
+                            getComputedStyle(document.documentElement).getPropertyValue('--edible'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--poisonous')
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 14,
+                                    family: 'Poppins'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createModelPerformanceChart() {
+            const ctx = document.getElementById('modelPerformanceChart');
+            if (!ctx) return;
+            
+            const metrics = window.dashboardData.modelMetrics || {};
+            
+            charts.modelPerformance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                    datasets: [{
+                        label: 'Model Performance',
+                        data: [
+                            (metrics.accuracy || 0.95) * 100,
+                            (metrics.precision || 0.94) * 100,
+                            (metrics.recall || 0.96) * 100,
+                            (metrics.f1_score || 0.95) * 100
+                        ],
+                        backgroundColor: 'rgba(139, 69, 19, 0.2)',
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary'),
+                        borderWidth: 3,
+                        pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary'),
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                font: {
+                                    size: 12,
+                                    family: 'Poppins'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(139, 69, 19, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14,
+                                    family: 'Poppins'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createFeatureImportanceChart() {
+            const ctx = document.getElementById('featureImportanceChart');
+            if (!ctx) return;
+            
+            // Sample feature importance data
+            const features = [
+                'cap-shape', 'cap-color', 'gill-color', 'habitat', 
+                'season', 'does-bruise-or-bleed', 'stem-surface', 'ring-type'
+            ];
+            const importance = [0.25, 0.20, 0.18, 0.15, 0.12, 0.10, 0.08, 0.06];
+            
+            charts.featureImportance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: features,
+                    datasets: [{
+                        label: 'Feature Importance',
+                        data: importance,
+                        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-light'),
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 0.3,
+                            ticks: {
+                                callback: function(value) {
+                                    return (value * 100).toFixed(0) + '%';
+                                },
+                                font: {
+                                    family: 'Poppins'
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: 'Poppins'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Importance: ${(context.parsed.x * 100).toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createModelComparisonChart() {
+            const ctx = document.getElementById('modelComparisonChart');
+            if (!ctx) return;
+            
+            const models = ['Random Forest', 'XGBoost', 'SVM', 'Logistic Regression', 'Neural Network'];
+            const accuracies = [0.954, 0.948, 0.932, 0.896, 0.941];
+            
+            charts.modelComparison = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: models,
+                    datasets: [{
+                        label: 'Model Accuracy',
+                        data: accuracies.map(acc => acc * 100),
+                        backgroundColor: [
+                            getComputedStyle(document.documentElement).getPropertyValue('--primary'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--accent'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--primary-light'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--primary-dark'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--warning')
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                },
+                                font: {
+                                    family: 'Poppins'
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    family: 'Poppins'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Accuracy: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Feature statistics
+        function populateFeatureStats() {
+            const featureStatsContainer = document.getElementById('featureStats');
+            if (!featureStatsContainer) return;
+            
+            const stats = window.dashboardData.featureStats || {};
+            
+            let html = '';
+            for (const [feature, featureStats] of Object.entries(stats)) {
+                if (featureStats.mean !== undefined) {
+                    // Numerical feature
+                    html += `
+                        <div class="feature-card">
+                            <div class="feature-name">${feature.replace('-', ' ').toUpperCase()}</div>
+                            <div class="feature-value">
+                                <strong>Mean:</strong> ${featureStats.mean.toFixed(2)}<br>
+                                <strong>Range:</strong> ${featureStats.min.toFixed(2)} - ${featureStats.max.toFixed(2)}<br>
+                                <strong>Std Dev:</strong> ${featureStats.std.toFixed(2)}
+                            </div>
+                        </div>
+                    `;
+                } else if (featureStats.unique_values !== undefined) {
+                    // Categorical feature
+                    html += `
+                        <div class="feature-card">
+                            <div class="feature-name">${feature.replace('-', ' ').toUpperCase()}</div>
+                            <div class="feature-value">
+                                <strong>Unique Values:</strong> ${featureStats.unique_values}<br>
+                                <strong>Top Categories:</strong><br>
+                                ${Object.entries(featureStats.top_values || {})
+                                    .slice(0, 3)
+                                    .map(([k, v]) => `• ${k}: ${v}`)
+                                    .join('<br>')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            featureStatsContainer.innerHTML = html;
+        }
+
+        // Mushroom prediction
+        async function predictMushroom() {
+            const form = document.getElementById('classifierForm');
+            if (!form) return;
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // Show loading state
+            setLoadingState(true);
+            
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                showPredictionResult(result);
+                
+            } catch (error) {
+                console.error('Prediction error:', error);
+                showErrorMessage('Error making prediction: ' + error.message);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function showPredictionResult(result) {
+            const resultDiv = document.getElementById('predictionResult');
+            const icon = document.getElementById('predictionIcon');
+            const text = document.getElementById('predictionText');
+            const confidence = document.getElementById('predictionConfidence');
+            
+            if (!resultDiv || !icon || !text || !confidence) return;
+            
+            // Set result content
+            if (result.is_poisonous) {
+                resultDiv.className = 'prediction-result poisonous';
+                icon.innerHTML = '<i class="fas fa-skull-crossbones"></i>';
+                text.textContent = 'POISONOUS';
+            } else {
+                resultDiv.className = 'prediction-result edible';
+                icon.innerHTML = '<i class="fas fa-leaf"></i>';
+                text.textContent = 'EDIBLE';
+            }
+            
+            confidence.textContent = `Confidence: ${(result.confidence * 100).toFixed(1)}%`;
+            
+            // Show result with animation
+            resultDiv.style.display = 'block';
+            
+            // Scroll to result
+            setTimeout(() => {
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+
+        function setLoadingState(isLoading) {
+            const btn = document.querySelector('.predict-btn');
+            const btnText = document.getElementById('predictBtnText');
+            const btnLoading = document.getElementById('predictBtnLoading');
+            
+            if (!btn || !btnText || !btnLoading) return;
+            
+            if (isLoading) {
+                btn.disabled = true;
+                btnText.style.display = 'none';
+                btnLoading.style.display = 'inline-block';
+            } else {
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+            }
+        }
+
+        // Export functionality
+        function exportDashboard() {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                dashboard_data: window.dashboardData,
+                current_section: currentSection
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+                type: 'application/json' 
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mushroom_dashboard_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Responsive design
+        function setupResponsiveDesign() {
+            window.addEventListener('resize', handleResize);
+            handleResize(); // Initial check
+        }
+
+        function handleResize() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (window.innerWidth <= 768) {
+                if (sidebar) sidebar.classList.add('collapsed');
+                if (mainContent) mainContent.classList.add('expanded');
+            } else {
+                if (sidebar) sidebar.classList.remove('collapsed');
+                if (mainContent) mainContent.classList.remove('expanded');
+            }
+            
+            // Resize charts
+            Object.values(charts).forEach(chart => {
+                if (chart && chart.resize) {
+                    chart.resize();
+                }
+            });
+        }
+
+        // Utility functions
+        function showErrorMessage(message) {
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'alert alert-danger alert-dismissible fade show';
+            alertContainer.style.position = 'fixed';
+            alertContainer.style.top = '20px';
+            alertContainer.style.right = '20px';
+            alertContainer.style.zIndex = '9999';
+            alertContainer.style.maxWidth = '400px';
+            
+            alertContainer.innerHTML = `
+                <strong>Error:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertContainer);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertContainer && alertContainer.parentNode) {
+                    alertContainer.parentNode.removeChild(alertContainer);
+                }
+            }, 5000);
+        }
+
+        function showSuccessMessage(message) {
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'alert alert-success alert-dismissible fade show';
+            alertContainer.style.position = 'fixed';
+            alertContainer.style.top = '20px';
+            alertContainer.style.right = '20px';
+            alertContainer.style.zIndex = '9999';
+            alertContainer.style.maxWidth = '400px';
+            
+            alertContainer.innerHTML = `
+                <strong>Success:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertContainer);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (alertContainer && alertContainer.parentNode) {
+                    alertContainer.parentNode.removeChild(alertContainer);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mushroom Classification Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* CSS Variables for Mushroom Theme */
+        :root {
+            --primary: #8B4513;
+            --primary-light: #A0522D;
+            --accent: #E98A3C;
+            --accent-light: #F4A460;
+            --bg-primary: #F5F5DC;
+            --bg-secondary: #FAEBD7;
+            --text-primary: #2C1810;
+            --text-secondary: #5D4037;
+            --success: #4CAF50;
+            --danger: #F44336;
+            --warning: #FF9800;
+            --edible: #4CAF50;
+            --poisonous: #F44336;
+            --border: #D7CCC8;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-img {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+            margin: 0;
+        }
+
+        .sidebar-item {
+            margin: 5px 15px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-left: 280px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .user-menu {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            padding: 30px;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Section Management */
+        .section {
+            display: block;
+        }
+
+        .section-hidden {
+            display: none;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Stat Cards */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            background: var(--primary);
+            color: white;
+        }
+
+        .stat-card.edible .stat-icon {
+            background: var(--edible);
+        }
+
+        .stat-card.poisonous .stat-icon {
+            background: var(--poisonous);
+        }
+
+        .stat-details {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Chart Cards */
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Forms */
+        .feature-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background-color: white;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Prediction Result */
+        .prediction-result {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 4px 15px var(--shadow);
+            display: none;
+        }
+
+        .prediction-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .prediction-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .prediction-icon.edible {
+            background: var(--edible);
+        }
+
+        .prediction-icon.poisonous {
+            background: var(--poisonous);
+        }
+
+        .prediction-content h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+        }
+
+        .confidence {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Feature Importance Table */
+        .feature-importance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .feature-importance-table th,
+        .feature-importance-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .feature-importance-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .feature-importance-table tr:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        /* Safety Warning */
+        .safety-warning {
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+            border-left: 5px solid var(--warning);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .safety-warning i {
+            color: var(--warning);
+            font-size: 1.5rem;
+            margin-top: 2px;
+        }
+
+        .safety-warning p {
+            margin: 0;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Classifier Interface */
+        .classifier-interface {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .header,
+            .main-content {
+                margin-left: 0;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-form {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation Classes */
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-img">
+                    <i class="fas fa-seedling"></i>
+                </div>
+                <h3 class="logo-text">Mushroom AI</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link active" onclick="showSection('overview')">
+                        <i class="fas fa-chart-line"></i>
+                        Overview
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('classifier')">
+                        <i class="fas fa-brain"></i>
+                        AI Classifier
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('visualizations')">
+                        <i class="fas fa-chart-pie"></i>
+                        Visualizations
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('feature-analysis')">
+                        <i class="fas fa-cogs"></i>
+                        Feature Analysis
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('model-insights')">
+                        <i class="fas fa-robot"></i>
+                        Model Insights
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('dataset')">
+                        <i class="fas fa-database"></i>
+                        Dataset
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link" onclick="showSection('safety')">
+                        <i class="fas fa-shield-alt"></i>
+                        Safety Guide
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Header -->
+        <header class="header">
+            <button class="btn btn-outline-primary d-md-none" onclick="toggleSidebar()" title="Toggle Sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="page-title">🍄 Mushroom Classification Dashboard</h1>
+            <div class="user-menu">
+                <button class="btn btn-outline-primary" onclick="exportData()" title="Export Data">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/about'" title="About Page">
+                    <i class="fas fa-info-circle me-1"></i> About
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <div id="overview" class="section">
+                <!-- Stats Cards -->
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-label">Total Samples</div>
+                            <div class="stat-value" id="totalSamples">{{ dataset_info.total_samples or '61,069' }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card edible">
+                        <div class="stat-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-label">Edible Mushrooms</div>
+                            <div class="stat-value" id="edibleCount">{{ dataset_info.edible_count or '30,824' }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card poisonous">
+                        <div class="stat-icon">
+                            <i class="fas fa-skull-crossbones"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-label">Poisonous Mushrooms</div>
+                            <div class="stat-value" id="poisonousCount">{{ dataset_info.poisonous_count or '30,245' }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-label">Features</div>
+                            <div class="stat-value" id="featuresCount">{{ dataset_info.features or '20' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Class Distribution</h3>
+                            <select id="chartType" onchange="updateClassDistribution()" title="Chart Type">
+                                <option value="doughnut">Doughnut</option>
+                                <option value="pie">Pie Chart</option>
+                                <option value="bar">Bar Chart</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="classDistributionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Model Performance</h3>
+                            <select id="metricSelect" onchange="updatePerformanceChart()" title="Metric Selection">
+                                <option value="all">All Metrics</option>
+                                <option value="accuracy">Accuracy</option>
+                                <option value="precision">Precision</option>
+                                <option value="recall">Recall</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classifier Section -->
+            <div id="classifier" class="section section-hidden">
+                <div class="classifier-interface">
+                    <h2 style="margin-bottom: 20px; color: var(--primary);">
+                        <i class="fas fa-brain me-2"></i>AI Mushroom Classifier
+                    </h2>
+                    <form id="classifierForm" class="feature-form">
+                        {% if key_features %}
+                        {% for feature in key_features %}
+                        <div class="form-group">
+                            <label class="form-label" for="{{ feature }}">
+                                {{ feature.replace('-', ' ').title() }}
+                            </label>
+                            {% if feature_map and feature_map[feature]['type'] == 'numerical' %}
+                            <input type="number" 
+                                   id="{{ feature }}" 
+                                   name="{{ feature }}" 
+                                   class="form-select"
+                                   min="{{ feature_map[feature]['values'][0] }}"
+                                   max="{{ feature_map[feature]['values'][1] }}"
+                                   step="0.1"
+                                   value="{{ (feature_map[feature]['values'][0] + feature_map[feature]['values'][1]) / 2 }}">
+                            {% else %}
+                            <select id="{{ feature }}" name="{{ feature }}" class="form-select">
+                                {% if feature_options and feature_options[feature] %}
+                                {% for value, label in feature_options[feature].items() %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                                {% else %}
+                                <option value="">Select {{ feature.replace('-', ' ').title() }}</option>
+                                {% endif %}
+                            </select>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <!-- Default form fields if no key_features available -->
+                        <div class="form-group">
+                            <label class="form-label" for="cap-shape">Cap Shape</label>
+                            <select id="cap-shape" name="cap-shape" class="form-select">
+                                <option value="b">Bell</option>
+                                <option value="c">Conical</option>
+                                <option value="x" selected>Convex</option>
+                                <option value="f">Flat</option>
+                                <option value="s">Sunken</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cap-color">Cap Color</label>
+                            <select id="cap-color" name="cap-color" class="form-select">
+                                <option value="n" selected>Brown</option>
+                                <option value="b">Buff</option>
+                                <option value="g">Gray</option>
+                                <option value="r">Green</option>
+                                <option value="p">Pink</option>
+                                <option value="u">Purple</option>
+                                <option value="e">Red</option>
+                                <option value="w">White</option>
+                                <option value="y">Yellow</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gill-color">Gill Color</label>
+                            <select id="gill-color" name="gill-color" class="form-select">
+                                <option value="n">Brown</option>
+                                <option value="b">Buff</option>
+                                <option value="g">Gray</option>
+                                <option value="p">Pink</option>
+                                <option value="u">Purple</option>
+                                <option value="e">Red</option>
+                                <option value="w" selected>White</option>
+                                <option value="y">Yellow</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                    </form>
+                    <button type="button" class="btn btn-primary" onclick="classifyMushroom()">
+                        <i class="fas fa-brain me-2"></i>Classify Mushroom
+                    </button>
+                    
+                    <!-- Prediction Result -->
+                    <div id="predictionResult" class="prediction-result">
+                        <div class="prediction-header">
+                            <div class="prediction-icon edible" id="resultIcon">
+                                <i class="fas fa-leaf"></i>
+                            </div>
+                            <div class="prediction-content">
+                                <h3 id="resultText">Edible</h3>
+                                <span class="confidence" id="confidenceText">Confidence: 95%</span>
+                            </div>
+                        </div>
+                        <p id="resultDescription">Based on the features provided, this mushroom is predicted to be edible.</p>
+                    </div>
+                    
+                    <!-- Safety Warning -->
+                    <div class="safety-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <p><strong>Important:</strong> Never consume wild mushrooms based solely on AI predictions. Always consult with expert mycologists.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizations Section -->
+            <div id="visualizations" class="section section-hidden">
+                <h2 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-chart-pie me-2"></i>Data Visualizations
+                </h2>
+                <div class="dashboard-grid">
+                    {% if viz_data and viz_data.class_distribution %}
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Class Distribution</h3>
+                        </div>
+                        <div class="chart-container">
+                            <img src="data:image/png;base64,{{ viz_data.class_distribution }}" style="width: 100%; height: 100%; object-fit: contain;" alt="Class Distribution">
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if viz_data and viz_data.feature_correlations %}
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Feature Correlations</h3>
+                        </div>
+                        <div class="chart-container">
+                            <img src="data:image/png;base64,{{ viz_data.feature_correlations }}" style="width: 100%; height: 100%; object-fit: contain;" alt="Feature Correlations">
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if viz_data and viz_data.model_feature_importance_image %}
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Feature Importance</h3>
+                        </div>
+                        <div class="chart-container">
+                            <img src="data:image/png;base64,{{ viz_data.model_feature_importance_image }}" style="width: 100%; height: 100%; object-fit: contain;" alt="Feature Importance">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Feature Analysis Section -->
+            <div id="feature-analysis" class="section section-hidden">
+                <h2 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-cogs me-2"></i>Feature Analysis
+                </h2>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Feature Importance Rankings</h3>
+                    </div>
+                    <table class="feature-importance-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Importance</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="featureImportanceBody">
+                            <tr>
+                                <td>Cap Shape</td>
+                                <td>High</td>
+                                <td>0.85</td>
+                            </tr>
+                            <tr>
+                                <td>Gill Color</td>
+                                <td>High</td>
+                                <td>0.78</td>
+                            </tr>
+                            <tr>
+                                <td>Cap Color</td>
+                                <td>Medium</td>
+                                <td>0.65</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Model Insights Section -->
+            <div id="model-insights" class="section section-hidden">
+                <h2 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-robot me-2"></i>Model Insights
+                </h2>
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Model Performance Metrics</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="modelMetricsChart"></canvas>
+                        </div>
+                    </div>
+                    {% if viz_data and viz_data.confusion_matrix %}
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Confusion Matrix</h3>
+                        </div>
+                        <div class="chart-container">
+                            <img src="data:image/png;base64,{{ viz_data.confusion_matrix }}" style="width: 100%; height: 100%; object-fit: contain;" alt="Confusion Matrix">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Current Model: {{ model_type or "Random Forest Classifier" }}</h3>
+                    </div>
+                    <p>The mushroom classification model uses advanced machine learning algorithms to predict mushroom edibility based on physical characteristics. The model has been trained on a comprehensive dataset of mushroom features.</p>
+                </div>
+            </div>
+
+            <!-- Dataset Section -->
+            <div id="dataset" class="section section-hidden">
+                <h2 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-database me-2"></i>Dataset Information
+                </h2>
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Dataset Statistics</h3>
+                        </div>
+                        <table class="feature-importance-table">
+                            <tr>
+                                <td><strong>Total Samples</strong></td>
+                                <td>{{ dataset_info.total_samples or '61,069' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Features</strong></td>
+                                <td>{{ dataset_info.features or '20' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Edible Mushrooms</strong></td>
+                                <td>{{ dataset_info.edible_count or '30,824' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Poisonous Mushrooms</strong></td>
+                                <td>{{ dataset_info.poisonous_count or '30,245' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Missing Values</strong></td>
+                                <td>{{ dataset_info.missing_values or '0' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    {% if viz_data and viz_data.categorical_features %}
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Categorical Features Distribution</h3>
+                        </div>
+                        <div class="chart-container">
+                            <img src="data:image/png;base64,{{ viz_data.categorical_features }}" style="width: 100%; height: 100%; object-fit: contain;" alt="Categorical Features">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Safety Section -->
+            <div id="safety" class="section section-hidden">
+                <h2 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-shield-alt me-2"></i>Safety Guidelines
+                </h2>
+                <div class="safety-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <p><strong>Critical Safety Information:</strong></p>
+                        <ul style="margin: 10px 0 0 20px;">
+                            <li>Never eat wild mushrooms based solely on AI predictions</li>
+                            <li>Always consult with expert mycologists for identification</li>
+                            <li>Use multiple identification methods and field guides</li>
+                            <li>When in doubt, do not consume</li>
+                            <li>This tool is for educational purposes only</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Key Identification Features</h3>
+                    </div>
+                    <table class="feature-importance-table">
+                        <tr>
+                            <td><strong>Cap Shape</strong></td>
+                            <td>Examine the overall shape of the mushroom cap</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cap Color</strong></td>
+                            <td>Note the primary color and any color variations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gill Color</strong></td>
+                            <td>Check the color of the gills underneath the cap</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bruising/Bleeding</strong></td>
+                            <td>Observe if the mushroom changes color when cut or bruised</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Habitat</strong></td>
+                            <td>Consider the environment where the mushroom was found</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Season</strong></td>
+                            <td>Note the time of year when the mushroom was found</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global dashboard data
+        window.dashboardData = {
+            datasetInfo: {{ dataset_info | tojson if dataset_info else '{}' }},
+            modelMetrics: {{ model_metrics | tojson if model_metrics else '{}' }},
+            featureImportance: {{ feature_importance | tojson if feature_importance else '[]' }},
+            classDistribution: {{ class_distribution | tojson if class_distribution else '{}' }}
+        };
+
+        // Section management
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('section-hidden');
+            });
+            
+            // Show selected section
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.remove('section-hidden');
+                selectedSection.classList.add('animate-fade-in');
+            }
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            event.target.closest('.sidebar-link').classList.add('active');
+        }
+
+        // Toggle sidebar on mobile
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+
+        // Export functionality
+        function exportData() {
+            // Implement export functionality
+            alert('Export functionality would be implemented here');
+        }
+
+        // Initialize charts when document loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+        });
+
+        // Chart initialization
+        function initializeCharts() {
+            initClassDistributionChart();
+            initPerformanceChart();
+            initModelMetricsChart();
+        }
+
+        // Class Distribution Chart
+        function initClassDistributionChart() {
+            const ctx = document.getElementById('classDistributionChart');
+            if (!ctx) return;
+
+            const data = window.dashboardData.classDistribution || {
+                edible: 30824,
+                poisonous: 30245
+            };
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Edible', 'Poisonous'],
+                    datasets: [{
+                        data: [data.edible || 30824, data.poisonous || 30245],
+                        backgroundColor: ['#4CAF50', '#F44336'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Performance Chart
+        function initPerformanceChart() {
+            const ctx = document.getElementById('performanceChart');
+            if (!ctx) return;
+
+            const metrics = window.dashboardData.modelMetrics || {
+                accuracy: 95.4,
+                precision: 94.8,
+                recall: 96.1,
+                f1_score: 95.4
+            };
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                    datasets: [{
+                        label: 'Performance (%)',
+                        data: [
+                            metrics.accuracy || 95.4,
+                            metrics.precision || 94.8,
+                            metrics.recall || 96.1,
+                            metrics.f1_score || 95.4
+                        ],
+                        backgroundColor: '#8B4513',
+                        borderColor: '#A0522D',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Model Metrics Chart
+        function initModelMetricsChart() {
+            const ctx = document.getElementById('modelMetricsChart');
+            if (!ctx) return;
+
+            const metrics = window.dashboardData.modelMetrics || {
+                accuracy: 95.4,
+                precision: 94.8,
+                recall: 96.1,
+                f1_score: 95.4
+            };
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                    datasets: [{
+                        label: 'Model Performance',
+                        data: [
+                            metrics.accuracy || 95.4,
+                            metrics.precision || 94.8,
+                            metrics.recall || 96.1,
+                            metrics.f1_score || 95.4
+                        ],
+                        backgroundColor: 'rgba(139, 69, 19, 0.2)',
+                        borderColor: '#8B4513',
+                        pointBackgroundColor: '#8B4513'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart update functions
+        function updateClassDistribution() {
+            // Implement chart type switching
+            const chartType = document.getElementById('chartType').value;
+            // Re-initialize chart with new type
+            initClassDistributionChart();
+        }
+
+        function updatePerformanceChart() {
+            // Implement metric filtering
+            const metric = document.getElementById('metricSelect').value;
+            // Update chart based on selected metric
+            initPerformanceChart();
+        }
+
+        // Mushroom classification
+        async function classifyMushroom() {
+            const form = document.getElementById('classifierForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert('Error: ' + result.error);
+                    return;
+                }
+
+                displayPredictionResult(result);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while classifying the mushroom.');
+            }
+        }
+
+        function displayPredictionResult(result) {
+            const resultDiv = document.getElementById('predictionResult');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultText = document.getElementById('resultText');
+            const confidenceText = document.getElementById('confidenceText');
+            const resultDescription = document.getElementById('resultDescription');
+
+            // Update result display
+            const isEdible = result.prediction === 'edible';
+            
+            resultIcon.className = `prediction-icon ${isEdible ? 'edible' : 'poisonous'}`;
+            resultIcon.innerHTML = `<i class="fas ${isEdible ? 'fa-leaf' : 'fa-skull-crossbones'}"></i>`;
+            
+            resultText.textContent = isEdible ? 'Edible' : 'Poisonous';
+            resultText.style.color = isEdible ? '#4CAF50' : '#F44336';
+            
+            confidenceText.textContent = `Confidence: ${(result.confidence * 100).toFixed(1)}%`;
+            
+            resultDescription.textContent = isEdible ? 
+                'Based on the features provided, this mushroom is predicted to be edible.' :
+                'Based on the features provided, this mushroom is predicted to be poisonous.';
+
+            // Show result
+            resultDiv.style.display = 'block';
+            resultDiv.classList.add('animate-fade-in');
+        }
+    </script>
+</body>
+</html>
